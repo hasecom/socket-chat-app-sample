@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <title>Document</title>
+    <style>
+        #canvas{
+            border:solid 1px black;
+        }
+    </style>
+</head>
+<body>
+    <form action="POST" id="submit_form">
+        <input type="text" name="text" id="message">
+        <input type="submit" value="send">
+    </form>
+    <ul id="messages"></ul>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <button id="move">移動しマリウス</button>
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let point = 25;
+        $(function() {
+            draw(point);
+            var socket = io();
+            $('#submit_form').submit(function(){
+                socket.emit('message',$('#message').val());
+                $('#message').val('');
+                return false;
+            });
+            socket.on('message',function(msg){
+                $('#messages').append($('<li>').text(msg));
+            });
+        });
+        $('#move').on('click',function(){
+            point = point + 10;
+            draw(point);
+        });
+        function draw(point){
+            if(canvas.getContext){
+                ctx.beginPath();
+                ctx.moveTo(10,point);
+                ctx.lineTo(300,point);
+                ctx.closePath();
+                ctx.stroke();
+            }
+            console.log(ctx)
+        }
+      </script>
+</body>
+</html>
