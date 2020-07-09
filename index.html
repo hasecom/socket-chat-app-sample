@@ -1,55 +1,177 @@
-<!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <title>Document</title>
-    <style>
-        #canvas{
-            border:solid 1px black;
-        }
-    </style>
+  <meta charset="utf-8">
+  <title>Sync Canvas</title>
+  <style type="text/css">
+    * {margin:0px; padding:0px;}
+    body {width:500px;}
+    .title {padding:10px;}
+    .main {padding-left:10px; margin:auto;}
+    .toolbar {}
+    .toolbar li {width:44px; height:44px; margin:auto;list-style-type: none; border:1px solid #ccc; border-radius:6px; margin:10px; display:block; float:left;}
+    #black {background-color:black;}
+    #red {background-color:red;}
+    #green {background-color:green;}
+    #blue {background-color:blue;}
+    #small {text-align:center; line-height:44px; font-size:100%;}
+    #middle {text-align:center; line-height:44px; font-size:200%;}
+    #large {text-align:center; line-height:44px; font-size:400%;}
+    .canvas {width:450px; height:400px; border:1px solid #ccc;}
+    .canvas canvas {width:450px; height:400px;}
+  </style>
 </head>
 <body>
-    <form action="POST" id="submit_form">
-        <input type="text" name="text" id="message">
-        <input type="submit" value="send">
-    </form>
-    <ul id="messages"></ul>
-    <canvas id="canvas" width="500" height="500"></canvas>
-    <button id="move">移動しマリウス</button>
-    <script>
-        let canvas = document.getElementById('canvas');
-        let ctx = canvas.getContext('2d');
-        let point = 25;
-        $(function() {
-            draw(point);
-            var socket = io();
-            $('#submit_form').submit(function(){
-                socket.emit('message',$('#message').val());
-                $('#message').val('');
-                return false;
-            });
-            socket.on('message',function(msg){
-                $('#messages').append($('<li>').text(msg));
-            });
-        });
-        $('#move').on('click',function(){
-            point = point + 10;
-            draw(point);
-        });
-        function draw(point){
-            if(canvas.getContext){
-                ctx.beginPath();
-                ctx.moveTo(10,point);
-                ctx.lineTo(300,point);
-                ctx.closePath();
-                ctx.stroke();
-            }
-            console.log(ctx)
+  <!-- Header -->
+  <h1 class="title">Sync Canvas</h1>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="toolbar">
+      <ul>
+        <li id="black"> </li>
+        <li id="blue"></li>
+        <li id="red"></li>
+        <li id="green"></li>
+        <li id="small">S</li>
+        <li id="middle">M</li>
+        <li id="large">L</li>
+      </ul>
+    </div>
+    <div style="clear:left;"></div>
+    <div class="canvas"><canvas id="myCanvas"></canvas></div>
+  </div>
+
+  <!-- ここでsocket.IOのライブラリを読み込む --> 
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+  <script type="text/javascript">
+    window.addEventListener("load", function () {
+
+      // サーバーサイドのsocket.IOに接続する
+      // 接続出来たら、サーバー側のコンソールにconnected!と表示される
+      var socket = io.connect("/");
+
+      // Canvas描画に必要な変数を定義する
+      var canvas = document.getElementById("myCanvas");
+      var c = canvas.getContext("2d");
+      var w = 450;
+      var h = 400;
+      var drawing = false;
+      var oldPos;
+
+      // Canvasを初期化する
+      canvas.width = w;
+      canvas.height = h;
+      c.strokeStyle = "#000000";
+      c.lineWidth = 5;
+      c.lineJoin = "round";
+      c.lineCap = "round";
+
+      // Canvas上の座標を計算する為の関数たち
+      function scrollX(){
+        return document.documentElement.scrollLeft || document.body.scrollLeft;
+      }
+      function scrollY(){
+        return document.documentElement.scrollTop || document.body.scrollTop;
+      }
+      function getPos (event) {
+        var mouseX = event.clientX - $(canvas).position().left + scrollX();
+        var mouseY = event.clientY - $(canvas).position().top + scrollY();
+        return {x:mouseX, y:mouseY};
+      }
+      function getPosT (event) {
+        var mouseX = event.touches[0].clientX - $(canvas).position().left + scrollX();
+        var mouseY = event.touches[0].clientY - $(canvas).position().top + scrollY();
+        return {x:mouseX, y:mouseY};
+      }
+                                   
+      // ここからは、Canvasに描画する為の処理                             
+      canvas.addEventListener("mousedown", function (event) {
+        drawing = true;
+        oldPos = getPos(event);
+      }, false);
+      canvas.addEventListener("mouseup", function () {
+        drawing = false;
+      }, false);
+      canvas.addEventListener("mousemove", function (event) {
+        var pos = getPos(event);
+        if (drawing) {
+          c.beginPath();
+          c.moveTo(oldPos.x, oldPos.y);
+          c.lineTo(pos.x, pos.y);
+          c.stroke();
+          c.closePath();
+          socket.emit("draw", {before:oldPos, after:pos});
+          oldPos = pos;
         }
-      </script>
+      }, false);
+      canvas.addEventListener("mouseout", function () {
+        drawing = false;
+      }, false);
+      canvas.addEventListener("touchstart", function (event) {
+        if (event.changedTouches.length != 1) return false;
+            drawing = true;
+            oldPos = getPos(event.touches[0]);
+      }, false);
+      canvas.addEventListener("touchend", function (event) {
+        if (event.changedTouches.length != 1) return false;
+        drawing = false;
+      }, false);
+      canvas.addEventListener("touchmove", function (event) {
+        if (event.changedTouches.length != 1) return false;
+        event.preventDefault();
+
+        var pos = getPos(event.touches[0]);
+        if (drawing) {
+          c.beginPath();
+          c.moveTo(oldPos.x, oldPos.y);
+          c.lineTo(pos.x, pos.y);
+          c.stroke();
+          c.closePath();
+          socket.emit("draw", {before:oldPos, after:pos});
+          oldPos = pos;
+        }
+      }, false);
+      canvas.addEventListener("touchcancel", function (event) {
+        if (event.changedTouches.length != 1) return false;
+        drawing = false;
+      }, false);
+     
+      // 色や太さを選択した場合の処理
+      // 選択した結果を、Canvasに設定して、
+      // socket.IOサーバーにも送付している
+      $("#black").click(function () {c.strokeStyle = "black";socket.emit("color", "black");});
+      $("#blue").click(function () {c.strokeStyle = "blue";socket.emit("color", "blue");});
+      $("#red").click(function () {c.strokeStyle = "red";socket.emit("color", "red");});
+      $("#green").click(function () {c.strokeStyle = "green";socket.emit("color", "green");});
+      $("#small").click(function () {c.lineWidth = 5;socket.emit("lineWidth", 5);});
+      $("#middle").click(function () {c.lineWidth = 10;socket.emit("lineWidth", 10);});
+      $("#large").click(function () {c.lineWidth = 20;socket.emit("lineWidth", 20);});
+     
+      // socket.IOサーバーから描画情報を受け取った場合の処理
+      // 受け取った情報を元に、Canvasに描画を行う
+      socket.on("draw", function (data) {
+        c.beginPath();
+        c.moveTo(data.before.x, data.before.y);
+        c.lineTo(data.after.x, data.after.y);
+        c.stroke();
+        c.closePath();
+      });
+     
+      // socket.IOサーバーから色情報を受け取った場合の処理
+      // Canvasに色を設定している
+      socket.on("color", function (data) {
+        c.strokeStyle = data;
+      });
+           
+      // socket.IOサーバーから線の太さ情報を受け取った場合の処理
+      // Canvasに線の太さを設定している
+      socket.on("lineWidth", function (data) {
+        c.lineWidth = data;
+      });
+
+                               
+    }, false);         
+  </script>
 </body>
 </html>
