@@ -7,11 +7,26 @@
     .title {padding:10px;}
     .main {padding-left:10px; margin:auto;}
     .toolbar {}
-    .toolbar li {width:44px; height:44px; margin:auto;list-style-type: none; border:1px solid #ccc; border-radius:6px; margin:10px; display:block; float:left;}
+    .toolbar li {
+        width:100px; 
+        height:100px; 
+        margin:auto;
+        list-style-type: none; 
+        border:1px solid #ccc; 
+        border-radius:6px; 
+        margin:10px; 
+        display:block; 
+        float:left;
+    }
     #black {background-color:black;}
     #red {background-color:red;}
     #green {background-color:green;}
     #blue {background-color:blue;}
+    #clear{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
     .canvas {
         width:900px; 
         height:800px; 
@@ -19,6 +34,9 @@
         margin:0 auto;
     }
     .canvas canvas {width:900px; height:800px;}
+    .pointer{
+        cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -27,15 +45,14 @@
 
   <!-- Main -->
   <div class="main">
-    <h2 id="count">0</h2>
     <div class="toolbar">
       <ul>
-        <li id="black"> </li>
-        <li id="blue"></li>
-        <li id="red"></li>
-        <li id="green"></li>
+        <li id="black" class="pointer"> </li>
+        <li id="blue" class="pointer"></li>
+        <li id="red" class="pointer"></li>
+        <li id="green" class="pointer"></li>
+        <li id="clear" class="pointer">✖︎</li>
       </ul>
-      <button id="clear">clear</button>
     </div>
     <div style="clear:left;"></div>
     <div class="canvas"><canvas id="myCanvas"></canvas></div>
